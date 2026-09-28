@@ -209,12 +209,16 @@ async def start_edit(callback: CallbackQuery, callback_data: TaskActionCB, state
     await callback.answer()
 
 
-@router.message(EditTaskSG.waiting_datetime)
+@router.message(EditTaskSG.waiting_datetime, F.text & ~F.text.startswith("/"))
 async def process_new_datetime(message: Message, state: FSMContext):
     data = await state.get_data()
     task_id = data["task_id"]
 
-    new_dt = parse_deadline(message.text)
+    try:
+        new_dt = parse_deadline(message.text)
+    except Exception as e:
+        logger.error(f"Date parse crashed: {e}")
+        new_dt = None
     if not new_dt:
         await message.answer(
             "❌ Не удалось распознать дату.\n"
@@ -247,6 +251,11 @@ async def process_new_datetime(message: Message, state: FSMContext):
         reply_markup=kb.as_markup()
     )
     await state.clear()
+
+
+@router.message(EditTaskSG.waiting_datetime)
+async def edit_task_wrong_input(message: Message) -> None:
+    await message.answer("Жду дату, например '05.08.2026 14:00'. Для отмены — /cancel.")
 
 
 @router.callback_query(TaskConfirmCB.filter(F.confirm == 1))
@@ -320,12 +329,16 @@ async def postpone_custom_start(callback: CallbackQuery, callback_data: Postpone
     await callback.answer()
 
 
-@router.message(PostponeSG.waiting_custom)
+@router.message(PostponeSG.waiting_custom, F.text & ~F.text.startswith("/"))
 async def postpone_custom_finish(message: Message, state: FSMContext):
     data = await state.get_data()
     task_id = data["task_id"]
 
-    new_dt = parse_deadline(message.text)
+    try:
+        new_dt = parse_deadline(message.text)
+    except Exception as e:
+        logger.error(f"Date parse crashed: {e}")
+        new_dt = None
     if not new_dt:
         await message.answer("❌ Не распознано. Попробуйте: 'завтра в 15:00'")
         return
@@ -335,3 +348,7 @@ async def postpone_custom_finish(message: Message, state: FSMContext):
 
     await message.answer(f"✅ Задача перенесена на {new_dt.strftime('%d.%m.%Y %H:%M')}")
     await state.clear()
+
+@router.message(PostponeSG.waiting_custom)
+async def postpone_wrong_input(message: Message) -> None:
+    await message.answer("Жду дату, например 'завтра в 15:00'. Для отмены — /cancel.")

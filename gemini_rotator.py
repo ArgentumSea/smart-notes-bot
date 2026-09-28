@@ -56,6 +56,9 @@ class GeminiRotator:
                     if code == 429:
                         logger.warning(f"Quota exceeded (429) on {model_name}")
                         continue
+                    if code == 404:
+                        logger.warning(f"Model not found (404) on {model_name}")
+                        continue
                     logger.error(f"Client error {code} on {model_name}")
                     raise
                 except ServerError as e:

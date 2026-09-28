@@ -23,8 +23,7 @@ ADMIN_USER_ID: int = int(os.getenv("ADMIN_USER_ID", "0"))
 
 # Пул моделей Gemini для rotation (приоритет сверху вниз)
 GEMINI_MODELS: list[str] = [
-    "gemini-3.5-flash",
     "gemini-3.6-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
 ]

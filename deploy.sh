@@ -14,7 +14,7 @@ apt-get install -y -qq python3 python3-venv python3-pip ffmpeg git wget unzip cu
 
 # 2. Пользователь
 if ! id -u botuser &>/dev/null; then
-    useradd -r -s /bin/false botuser
+    useradd -r -m -s /bin/false botuser
 fi
 
 # 3. Клонирование
@@ -23,19 +23,19 @@ git clone "$REPO_URL" "$INSTALL_DIR"
 chown -R botuser:botuser "$INSTALL_DIR"
 
 # 4. Окружение
-su - botuser -s /bin/bash -c "python3 -m venv $INSTALL_DIR/venv"
-su - botuser -s /bin/bash -c "$INSTALL_DIR/venv/bin/pip install --upgrade pip -q"
-su - botuser -s /bin/bash -c "$INSTALL_DIR/venv/bin/pip install -r $INSTALL_DIR/requirements.txt -q"
+su botuser -s /bin/bash -c "python3 -m venv $INSTALL_DIR/venv"
+su botuser -s /bin/bash -c "$INSTALL_DIR/venv/bin/pip install --upgrade pip -q"
+su botuser -s /bin/bash -c "$INSTALL_DIR/venv/bin/pip install -r $INSTALL_DIR/requirements.txt -q"
 
 # 5. .env (nano)
-cat > "$INSTALL_DIR/.env" << 'EOF'
+cat > "$INSTALL_DIR/.env" << 'ENVEOF'
 BOT_TOKEN=
 GEMINI_API_KEY=
 DATABASE_URL=sqlite+aiosqlite:///opt/smart_notes_bot/smart_notes.db
 VOSK_MODEL_PATH=/opt/vosk-model-ru
 TIMEZONE=Europe/Moscow
 LOG_PATH=/var/log/smartnotes/bot.log
-EOF
+ENVEOF
 
 chown botuser:botuser "$INSTALL_DIR/.env"
 nano "$INSTALL_DIR/.env"
@@ -69,7 +69,7 @@ chown botuser:botuser /var/log/smartnotes
 timedatectl set-timezone Europe/Moscow || true
 
 # 9. Systemd
-cat > "/etc/systemd/system/${SERVICE_NAME}.service" << EOF
+cat > "/etc/systemd/system/${SERVICE_NAME}.service" << 'SERVICEEOF'
 [Unit]
 Description=Smart Notes Telegram Bot
 After=network.target
@@ -78,21 +78,19 @@ After=network.target
 Type=simple
 User=botuser
 Group=botuser
-WorkingDirectory=$INSTALL_DIR
+WorkingDirectory=/opt/smart_notes_bot
 Environment=PYTHONUNBUFFERED=1
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/main.py
+ExecStart=/opt/smart_notes_bot/venv/bin/python /opt/smart_notes_bot/main.py
 Restart=always
 RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SERVICEEOF
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
-
-# 10. Применить патчи админки (миграция БД, подключение хендлеров)
-bash "$INSTALL_DIR/patch/apply.sh"
+systemctl start "$SERVICE_NAME"
 
 echo ""
 echo "=== Готово ==="
